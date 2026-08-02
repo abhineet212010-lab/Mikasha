@@ -1,107 +1,65 @@
-const { Events, AttachmentBuilder, EmbedBuilder } = require('discord.js');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
-const path = require('path');
-const Welcome = require('../models/welcome');
-const AutoRole = require('../models/AutoRoles');
+const {
+    EmbedBuilder
+} = require("discord.js");
 
-function getOrdinalSuffix(number) {
-  const lastDigit = number % 10;
-  const lastTwoDigits = number % 100;
-
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 13) return 'th';
-  switch (lastDigit) {
-    case 1:
-      return 'st';
-    case 2:
-      return 'nd';
-    case 3:
-      return 'rd';
-    default:
-      return 'th';
-  }
-}
+const Guild = require("../models/Guild");
 
 module.exports = {
-  name: Events.GuildMemberAdd,
-  async execute(member) {
-    try {
-      const autoRole = await AutoRole.findOne({ serverId: member.guild.id });
-      const welcomeData = await Welcome.findOne({ serverId: member.guild.id });
+    name: "guildMemberAdd",
 
-      if (!welcomeData || !welcomeData.enabled || !welcomeData.channelId)
-        return;
+    async execute(member) {
 
-      const canvas = createCanvas(1920, 1080);
-      const ctx = canvas.getContext('2d');
+        try {
 
-      // Load background
-      const background = await loadImage(
-        path.join(__dirname, '../utils/welcome-background.png')
-      );
-      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+            const data = await Guild.findOne({
+                guildId: member.guild.id
+            });
 
-      // Load avatar
-      const avatar = await loadImage(
-        member.user.displayAvatarURL({ extension: 'png', size: 512 })
-      );
-      const centerX = 960;
-      const centerY = 350;
-      const radius = 250;
+            if (!data || !data.welcomeChannel) return;
 
-      // Add dark background behind avatar
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2, true);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fill();
-      ctx.restore();
+            const channel = member.guild.channels.cache.get(
+                data.welcomeChannel
+            );
 
-      // Clip and draw avatar
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(
-        avatar,
-        centerX - radius,
-        centerY - radius,
-        radius * 2,
-        radius * 2
-      );
-      ctx.restore();
+            if (!channel) return;
 
-      // Add avatar border
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
-      ctx.lineWidth = 10;
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.stroke();
 
-      // Member info
-      const memberCount = member.guild.memberCount;
-      const ordinalSuffix = getOrdinalSuffix(memberCount);
+            const embed = new EmbedBuilder()
+                .setColor("#ff4d6d")
+                .setTitle("👋 Welcome To The Server!")
+                .setDescription(
+`Hey ${member} 👋
 
-      let description =
-        welcomeData.description || 'Welcome {member} to {server}';
-      description = description
-        .replace(/{member}/g, member.user)
-        .replace(/{server}/g, member.guild.name)
-        .replace(/{serverid}/g, member.guild.id)
-        .replace(/{userid}/g, member.user.id)
-        .replace(
-          /{joindate}/g,
-          `<t:${Math.floor((member.joinedAt || Date.now()) / 1000)}:F>`
-        )
-        .replace(
-          /{accountage}/g,
-          `<t:${Math.floor(member.user.createdAt / 1000)}:R>`
-        )
-        .replace(/{membercount}/g, memberCount)
-        .replace(
-          /{serverage}/g,
-          `<t:${Math.floor(member.guild.createdAt / 1000)}:R>`
-        );
+Welcome to **${member.guild.name}** 🎉
+
+You are our **${member.guild.memberCount}th member**!
+
+Enjoy your stay and have fun 💖`
+                )
+                .setThumbnail(
+                    member.user.displayAvatarURL({
+                        dynamic: true
+                    })
+                )
+                .setFooter({
+                    text: "Mikasa Welcome System"
+                })
+                .setTimestamp();
+
+
+            await channel.send({
+                embeds: [embed]
+            });
+
+
+        } catch (error) {
+            console.error(
+                "Welcome Error:",
+                error
+            );
+        }
+    }
+};
 
       // Add welcome text
       ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';

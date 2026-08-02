@@ -1,79 +1,49 @@
 const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  ChannelType,
-} = require('discord.js');
-const TicketSettings = require('../../models/TicketSettings');
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
+} = require("discord.js");
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('ticketsetup')
-    .setDescription('Configure the ticket system')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addRoleOption((option) =>
-      option
-        .setName('support_role')
-        .setDescription('Role that can see tickets')
-        .setRequired(true)
-    )
-    .addChannelOption((option) =>
-      option
-        .setName('category')
-        .setDescription('Category for tickets')
-        .addChannelTypes(ChannelType.GuildCategory)
-        .setRequired(true)
-    )
-    .addChannelOption((option) =>
-      option
-        .setName('logs')
-        .setDescription('Channel for ticket logs')
-        .setRequired(true)
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName('limit')
-        .setDescription('Maximum tickets per user')
-        .setMinValue(1)
-        .setMaxValue(10)
-        .setRequired(false)
-    ),
+    name: "ticket-setup",
 
-  async execute(interaction) {
-    if (!interaction.member.permissions.has('Administrator')) {
-      return interaction.reply({
-        content: 'You do not have `Administrator` permission to setup Tickets!',
-        ephemeral: true,
-      });
+    data: new SlashCommandBuilder()
+        .setName("ticket-setup")
+        .setDescription("Setup the ticket panel.")
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    async execute(interaction) {
+
+        const embed = new EmbedBuilder()
+            .setColor("#5865F2")
+            .setTitle("🎫 Mikasa Support")
+            .setDescription(
+                "Need help?\n\nClick the button below to create a private support ticket.\n\nOur staff will assist you as soon as possible."
+            )
+            .setFooter({
+                text: "Mikasa Support System"
+            })
+            .setTimestamp();
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("ticket_create")
+                .setLabel("Create Ticket")
+                .setEmoji("🎫")
+                .setStyle(ButtonStyle.Primary)
+        );
+
+        await interaction.reply({
+            content: "✅ Ticket panel created.",
+            ephemeral: true
+        });
+
+        await interaction.channel.send({
+            embeds: [embed],
+            components: [row]
+        });
     }
-    const supportRole = interaction.options.getRole('support_role');
-    const category = interaction.options.getChannel('category');
-    const logs = interaction.options.getChannel('logs');
-    const limit = interaction.options.getInteger('limit') || 3;
-
-    try {
-      await TicketSettings.findOneAndUpdate(
-        { guildId: interaction.guildId },
-        {
-          guildId: interaction.guildId,
-          enabled: true,
-          categoryId: category.id,
-          logChannelId: logs.id,
-          supportRoleIds: [supportRole.id],
-          ticketLimit: limit,
-        },
-        { upsert: true, new: true }
-      );
-
-      await interaction.reply({
-        content: '✅ Ticket system has been configured successfully!',
-        ephemeral: true,
-      });
-    } catch (error) {
-      console.error(error);
-      await interaction.reply({
-        content: '❌ An error occurred while setting up the ticket system.',
-        ephemeral: true,
-      });
-    }
-  },
 };

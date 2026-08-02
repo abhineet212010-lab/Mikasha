@@ -5,7 +5,7 @@ module.exports = (client) => {
     const commandsPath = path.join(__dirname, "..", "commands");
 
     if (!fs.existsSync(commandsPath)) {
-        console.log("⚠️ Commands folder not found.");
+        console.log("❌ Commands folder not found!");
         return;
     }
 
@@ -23,19 +23,22 @@ module.exports = (client) => {
         for (const file of commandFiles) {
             const command = require(path.join(folderPath, file));
 
-            if (!command.name) continue;
+            if (!command.name || !command.execute) {
+                console.log(`⚠️ Skipped ${file}`);
+                continue;
+            }
 
             client.commands.set(command.name, command);
 
-            if (command.aliases && Array.isArray(command.aliases)) {
+            if (command.aliases) {
                 for (const alias of command.aliases) {
                     client.aliases.set(alias, command.name);
                 }
             }
 
-            console.log(`✅ Loaded Command: ${command.name}`);
+            console.log(`✅ Loaded: ${command.name}`);
         }
     }
 
-    console.log(`📦 Total Commands: ${client.commands.size}`);
+    console.log(`📦 Total Commands Loaded: ${client.commands.size}`);
 };

@@ -1,92 +1,131 @@
 require("dotenv").config();
 
 const {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Collection
+    Client,
+    GatewayIntentBits,
+    Partials,
+    Collection
 } = require("discord.js");
 
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
+const logger = require("./utils/logger");
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildModeration
-  ],
-  partials: [
-    Partials.Channel,
-    Partials.Message,
-    Partials.Reaction
-  ]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.DirectMessages
+    ],
+    partials: [
+        Partials.Channel,
+        Partials.Message,
+        Partials.Reaction,
+        Partials.User
+    ]
 });
 
 client.commands = new Collection();
 client.aliases = new Collection();
 
+global.client = client;
+
+/* ==============================
+   MongoDB Connection
+============================== */
+
 async function connectMongo() {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ MongoDB Connected");
-  } catch (err) {
-    console.error("❌ MongoDB Error:", err);
-  }
+    if (!process.env.MONGODB_URI) {
+        logger.warn("MongoDB URI not found.");
+        return;
+    }
+
+    try {
+        await mongoose.connect(process.env.MONGODB_URI);
+        logger.success("MongoDB Connected");
+    } catch (err) {
+        logger.error(err);
+    }
 }
+
+/* ==============================
+   Load Handlers
+============================== */
 
 function loadHandlers() {
-  const handlersPath = path.join(__dirname, "handlers");
 
-  if (!fs.existsSync(handlersPath)) return;
+    const handlersPath = path.join(__dirname, "handlers");
 
-  const handlerFiles = fs
-    .readdirSync(handlersPath)
-    .filter(file => file.endsWith(".js"));
+    if (!fs.existsSync(handlersPath)) return;
 
-  for (const file of handlerFiles) {
-    require(`./handlers/${file}`)(client);
-  }
+    const files = fs
+        .readdirSync(handlersPath)
+        .filter(file => file.endsWith(".js"));
+
+    for (const file of files) {
+        require(`./handlers/${file}`)(client);
+    }
+
+    logger.success("Handlers Loaded");
 }
+
+/* ==============================
+   Load Events
+============================== */
 
 function loadEvents() {
-  const eventsPath = path.join(__dirname, "events");
 
-  if (!fs.existsSync(eventsPath)) return;
+    const eventsPath = path.join(__dirname, "events");
 
-  const eventFiles = fs
-    .readdirSync(eventsPath)
-    .filter(file => file.endsWith(".js"));
+    if (!fs.existsSync(eventsPath)) return;
 
-  for (const file of eventFiles) {
-    const event = require(`./events/${file}`);
+    const files = fs
+        .readdirSync(eventsPath)
+        .filter(file => file.endsWith(".js"));
 
-    if (event.once) {
-      client.once(event.name, (...args) =>
-        event.execute(...args, client)
-      );
-    } else {
-      client.on(event.name, (...args) =>
-        event.execute(...args, client)
-      );
+    for (const file of files) {
+
+        const event = require(`./events/${file}`);
+
+        if (event.once) {
+            client.once(event.name, (...args) =>
+                event.execute(...args, client)
+            );
+        } else {
+            client.on(event.name, (...args) =>
+                event.execute(...args, client)
+            );
+        }
     }
-  }
+
+    logger.success("Events Loaded");
 }
 
-(async () => {
-  await connectMongo();
-
-  loadHandlers();
-
-  loadEvents();
-
-  client.login(process.env.TOKEN);
-})();
+/* ==============================
+   Error Handlers
+============================== */
 
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
+
+/* ==============================
+   Start Bot
+============================== */
+
+(async () => {
+
+    await connectMongo();
+
+    loadHandlers();
+
+    loadEvents();
+
+    client.login(process.env.TOKEN);
+
+})();

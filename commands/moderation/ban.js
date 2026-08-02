@@ -1,107 +1,77 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const ms = require('ms');
+const {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    EmbedBuilder
+} = require("discord.js");
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('ban')
-    .setDescription('Ban a member from the server.')
-    .addUserOption((option) =>
-      option.setName('user').setDescription('The user to ban').setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName('reason')
-        .setDescription('Reason for banning the user')
-        .setRequired(false)
-    )
-    .addStringOption((option) =>
-      option
-        .setName('duration')
-        .setDescription('Duration for temporary ban (e.g., "2d1h30m40s")')
-        .setRequired(false)
-    ),
+    name: "ban",
 
-  async execute(interaction) {
-    const { default: prettyMs } = await import('pretty-ms');
-    const user = interaction.options.getUser('user');
-    const reason =
-      interaction.options.getString('reason') || 'No reason provided.';
-    const duration = interaction.options.getString('duration');
-    const member = interaction.guild.members.cache.get(user.id);
-    if (!member) {
-      return interaction.reply({
-        content: 'The user is not in the server',
-        ephemeral: true,
-      });
-    }
-    const executor = interaction.member;
-    const botMember = interaction.guild.members.cache.get(
-      interaction.client.user.id
-    );
+    data: new SlashCommandBuilder()
+        .setName("ban")
+        .setDescription("Ban a member from the server.")
+        .addUserOption(option =>
+            option
+                .setName("user")
+                .setDescription("User to ban")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("reason")
+                .setDescription("Reason for ban")
+                .setRequired(false)
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
-    if (!interaction.member.permissions.has('BanMembers')) {
-      return interaction.reply({
-        content: 'You do not have `BanMembers` permission to ban members!',
-        ephemeral: true,
-      });
-    }
+    async execute(interaction) {
 
-    if (member.roles.highest.position >= executor.roles.highest.position) {
-      return interaction.reply({
-        content:
-          'You cannot ban this user as they have a higher or equal role.',
-        ephemeral: true,
-      });
-    }
-    if (member.roles.highest.position >= botMember.roles.highest.position) {
-      return interaction.reply({
-        content:
-          'I cannot ban this user as they have a higher or equal role than me.',
-        ephemeral: true,
-      });
-    }
+        const member = interaction.options.getMember("user");
+        const reason =
+            interaction.options.getString("reason") || "No reason provided.";
 
-    const durationRegex = /^(?:\d+d)?(?:\d+h)?(?:\d+m)?(?:\d+s)?$/;
-    let durationInMs = null;
-
-    if (duration) {
-      if (!durationRegex.test(duration)) {
-        return interaction.reply({
-          content: 'Invalid duration format! Use something like `1d2h30m40s`.',
-          ephemeral: true,
-        });
-      }
-      durationInMs = parseDuration(duration);
-    }
-
-    await member.ban({ reason });
-
-    const banEmbed = new EmbedBuilder()
-      .setColor(0xff0000)
-      .setTitle('Member Banned')
-      .setDescription(`⛔ ${user.tag} has been banned from the server.`)
-      .addFields(
-        { name: 'Reason', value: reason, inline: true },
-        {
-          name: 'Banned by',
-          value: `<@${interaction.user.id}>`,
-          inline: true,
-        },
-        {
-          name: 'Duration',
-          value: durationInMs
-            ? prettyMs(durationInMs, { verbose: true })
-            : 'Permanent',
-          inline: true,
+        if (!member) {
+            return interaction.reply({
+                content: "❌ User not found.",
+                ephemeral: true
+            });
         }
-      )
-      .setTimestamp();
 
-    await interaction.reply({ embeds: [banEmbed] });
+        if (!member.bannable) {
+            return interaction.reply({
+                content: "❌ I can't ban this member.",
+                ephemeral: true
+            });
+        }
 
-    if (durationInMs) {
-      setTimeout(async () => {
-        try {
+        await member.ban({ reason });
+
+        const embed = new EmbedBuilder()
+            .setColor("#ff4d6d")
+            .setTitle("🔨 Member Banned")
+            .addFields(
+                {
+                    name: "User",
+                    value: `${member.user.tag}`,
+                    inline: true
+                },
+                {
+                    name: "Moderator",
+                    value: `${interaction.user.tag}`,
+                    inline: true
+                },
+                {
+                    name: "Reason",
+                    value: reason
+                }
+            )
+            .setTimestamp();
+
+        return interaction.reply({
+            embeds: [embed]
+        });
+    }
+};        try {
           await interaction.guild.members.unban(
             user.id,
             'Temporary ban duration expired'

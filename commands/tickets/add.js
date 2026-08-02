@@ -1,115 +1,51 @@
 const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-  ButtonBuilder,
-  ButtonStyle,
-  ActionRowBuilder,
-} = require('discord.js');
-const Ticket = require('../../models/Ticket');
-const TicketBan = require('../../models/TicketBan');
-const TicketSettings = require('../../models/TicketSettings');
-const closeTicket = require('../../functions/closeTicket');
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    EmbedBuilder
+} = require("discord.js");
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('ticket')
-    .setDescription('Ticket management commands')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('close')
-        .setDescription('Close a ticket')
-        .addStringOption((option) =>
-          option
-            .setName('reason')
-            .setDescription('Reason for closing the ticket')
-            .setRequired(false)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('transfer')
-        .setDescription('Transfer a ticket to another staff member')
-        .addUserOption((option) =>
-          option
-            .setName('user')
-            .setDescription('User to transfer the ticket to')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('ban')
-        .setDescription('Ban a user from creating tickets')
-        .addUserOption((option) =>
-          option
-            .setName('user')
-            .setDescription('User to ban from tickets')
-            .setRequired(true)
-        )
-        .addStringOption((option) =>
-          option
-            .setName('reason')
-            .setDescription('Reason for the ticket ban')
-            .setRequired(false)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('unban')
-        .setDescription('Unban a user from creating tickets')
-        .addUserOption((option) =>
-          option
-            .setName('user')
-            .setDescription('User to unban from tickets')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('add')
-        .setDescription('Add a user to the ticket')
-        .addUserOption((option) =>
-          option
-            .setName('user')
-            .setDescription('User to add to the ticket')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('remove')
-        .setDescription('Remove a user from the ticket')
-        .addUserOption((option) =>
-          option
-            .setName('user')
-            .setDescription('User to remove from the ticket')
-            .setRequired(true)
-        )
-    ),
+    name: "ticket-add",
 
-  async execute(interaction) {
-    const subcommand = interaction.options.getSubcommand();
-    const settings = await TicketSettings.findOne({
-      guildId: interaction.guildId,
-    });
+    data: new SlashCommandBuilder()
+        .setName("ticket-add")
+        .setDescription("Add a user to the current ticket.")
+        .addUserOption(option =>
+            option
+                .setName("user")
+                .setDescription("User to add")
+                .setRequired(true)
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
-    if (!settings?.enabled) {
-      return interaction.reply({
-        content: '❌ Ticket system is not enabled in this server.',
-        ephemeral: true,
-      });
+    async execute(interaction) {
+
+        if (!interaction.channel.name.startsWith("ticket-")) {
+            return interaction.reply({
+                content: "❌ This is not a ticket.",
+                ephemeral: true
+            });
+        }
+
+        const user = interaction.options.getUser("user");
+
+        await interaction.channel.permissionOverwrites.create(user.id, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true
+        });
+
+        const embed = new EmbedBuilder()
+            .setColor("#57F287")
+            .setTitle("➕ User Added")
+            .setDescription(`${user} has been added to this ticket.`)
+            .setTimestamp();
+
+        return interaction.reply({
+            embeds: [embed]
+        });
     }
-
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const hasPermission = settings.supportRoleIds.some((roleId) =>
-      member.roles.cache.has(roleId)
-    );
-
-    if (!hasPermission) {
-      return interaction.reply({
-        content:
+};        content:
           '❌ You do not have permission to use ticket management commands!',
         ephemeral: true,
       });

@@ -1,6 +1,9 @@
 {
   "name": "lanya",
   "version": "3.4.3",
+  "engines": {
+  "node": "20.x"
+  }
   "description": "An open-source Discord bot designed to enhance community interaction with a variety of engaging and useful features.",
   "main": "lanya.js",
   "keywords": [

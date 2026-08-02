@@ -1,43 +1,41 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
+
 module.exports = (client) => {
-  client.commands = new Map();
+    const commandsPath = path.join(__dirname, "..", "commands");
 
-  const commandsPath = path.join(__dirname, '../commands');
-  fs.readdirSync(commandsPath).forEach((category) => {
-    const categoryPath = path.join(commandsPath, category);
-    const commandFiles = fs
-      .readdirSync(categoryPath)
-      .filter((file) => file.endsWith('.js'));
-
-    for (const file of commandFiles) {
-      const command = require(path.join(categoryPath, file));
-
-      client.commands.set(command.data.name, { ...command, category });
+    if (!fs.existsSync(commandsPath)) {
+        console.log("⚠️ Commands folder not found.");
+        return;
     }
-  });
-  let commandCount = 0;
-  let categoryCount = 0;
 
-  const categories = fs.readdirSync(commandsPath);
-  categoryCount = categories.length;
+    const folders = fs.readdirSync(commandsPath);
 
-  categories.forEach((category) => {
-    const categoryPath = path.join(commandsPath, category);
-    const commandFiles = fs
-      .readdirSync(categoryPath)
-      .filter((file) => file.endsWith('.js'));
+    for (const folder of folders) {
+        const folderPath = path.join(commandsPath, folder);
 
-    for (const file of commandFiles) {
-      const command = require(path.join(categoryPath, file));
-      client.commands.set(command.data.name, { ...command, category });
-      commandCount++;
+        if (!fs.statSync(folderPath).isDirectory()) continue;
+
+        const commandFiles = fs
+            .readdirSync(folderPath)
+            .filter(file => file.endsWith(".js"));
+
+        for (const file of commandFiles) {
+            const command = require(path.join(folderPath, file));
+
+            if (!command.name) continue;
+
+            client.commands.set(command.name, command);
+
+            if (command.aliases && Array.isArray(command.aliases)) {
+                for (const alias of command.aliases) {
+                    client.aliases.set(alias, command.name);
+                }
+            }
+
+            console.log(`✅ Loaded Command: ${command.name}`);
+        }
     }
-  });
 
-  console.log(
-    global.styles.successColor(
-      `✅ Loaded ${commandCount} commands across ${categoryCount} categories.`
-    )
-  );
+    console.log(`📦 Total Commands: ${client.commands.size}`);
 };

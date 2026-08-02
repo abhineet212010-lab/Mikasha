@@ -4,8 +4,7 @@ const {
   Client,
   GatewayIntentBits,
   Partials,
-  Collection,
-  ActivityType
+  Collection
 } = require("discord.js");
 
 const mongoose = require("mongoose");
@@ -19,32 +18,39 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildModeration,
-    GatewayIntentBits.GuildInvites,
-    GatewayIntentBits.GuildEmojisAndStickers,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.DirectMessages
+    GatewayIntentBits.GuildModeration
   ],
   partials: [
     Partials.Channel,
     Partials.Message,
-    Partials.Reaction,
-    Partials.User
+    Partials.Reaction
   ]
 });
 
 client.commands = new Collection();
-client.slashCommands = new Collection();
 client.aliases = new Collection();
-
-global.client = client;
 
 async function connectMongo() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("🟢 MongoDB Connected");
+    console.log("✅ MongoDB Connected");
   } catch (err) {
-    console.error("🔴 MongoDB Error:", err);
+    console.error("❌ MongoDB Error:", err);
+  }
+}
+
+function loadHandlers() {
+  const handlersPath = path.join(__dirname, "handlers");
+
+  if (!fs.existsSync(handlersPath)) return;
+
+  const handlerFiles = fs
+    .readdirSync(handlersPath)
+    .filter(file => file.endsWith(".js"));
+
+  for (const file of handlerFiles) {
+    require(`./handlers/${file}`)(client);
   }
 }
 
@@ -53,36 +59,34 @@ function loadEvents() {
 
   if (!fs.existsSync(eventsPath)) return;
 
-  const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".js"));
+  const eventFiles = fs
+    .readdirSync(eventsPath)
+    .filter(file => file.endsWith(".js"));
 
   for (const file of eventFiles) {
     const event = require(`./events/${file}`);
 
     if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args, client));
+      client.once(event.name, (...args) =>
+        event.execute(...args, client)
+      );
     } else {
-      client.on(event.name, (...args) => event.execute(...args, client));
+      client.on(event.name, (...args) =>
+        event.execute(...args, client)
+      );
     }
   }
-
-  console.log(`✅ Loaded ${eventFiles.length} Events`);
 }
-
-client.once("ready", () => {
-  console.log(`🤖 Logged in as ${client.user.tag}`);
-
-  client.user.setActivity("Mikasa | /help", {
-    type: ActivityType.Playing
-  });
-});
-
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
 
 (async () => {
   await connectMongo();
+
+  loadHandlers();
 
   loadEvents();
 
   client.login(process.env.TOKEN);
 })();
+
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);

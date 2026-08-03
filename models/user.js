@@ -1,17 +1,18 @@
-const { Schema, model } = require("mongoose");
+const mongoose = require("mongoose");
 
-const userSchema = new Schema({
-    userId: {
-        type: String,
-        required: true,
-        unique: true
-    },
+const userSchema = new mongoose.Schema({
 
     guildId: {
         type: String,
         required: true
     },
 
+    userId: {
+        type: String,
+        required: true
+    },
+
+    // Level System
     xp: {
         type: Number,
         default: 0
@@ -22,9 +23,10 @@ const userSchema = new Schema({
         default: 1
     },
 
+    // Economy (Future)
     balance: {
         type: Number,
-        default: 1000
+        default: 0
     },
 
     bank: {
@@ -32,23 +34,37 @@ const userSchema = new Schema({
         default: 0
     },
 
+    // Moderation
     warns: {
         type: Number,
         default: 0
     },
 
-    daily: {
-        type: Number,
-        default: 0
+    // AFK System
+    afk: {
+        type: Boolean,
+        default: false
     },
 
-    inventory: {
-        type: Array,
-        default: []
+    afkReason: {
+        type: String,
+        default: null
+    },
+
+    afkSince: {
+        type: Number,
+        default: null
     }
 
 }, {
     timestamps: true
 });
 
-module.exports = model("User", userSchema);
+userSchema.index({
+    guildId: 1,
+    userId: 1
+}, {
+    unique: true
+});
+
+module.exports = mongoose.model("User", userSchema);

@@ -71,38 +71,4 @@ module.exports = {
             embeds: [embed]
         });
     }
-};        try {
-          await interaction.guild.members.unban(
-            user.id,
-            'Temporary ban duration expired'
-          );
-        } catch (error) {
-          console.error(`Failed to unban ${user.tag}:`, error);
-        }
-      }, durationInMs);
-    }
-  },
 };
-
-function parseDuration(duration) {
-  const days =
-    (duration.match(/(\d+)d/) ? parseInt(duration.match(/(\d+)d/)[1], 10) : 0) *
-    24 *
-    60 *
-    60 *
-    1000;
-  const hours =
-    (duration.match(/(\d+)h/) ? parseInt(duration.match(/(\d+)h/)[1], 10) : 0) *
-    60 *
-    60 *
-    1000;
-  const minutes =
-    (duration.match(/(\d+)m/) ? parseInt(duration.match(/(\d+)m/)[1], 10) : 0) *
-    60 *
-    1000;
-  const seconds =
-    (duration.match(/(\d+)s/) ? parseInt(duration.match(/(\d+)s/)[1], 10) : 0) *
-    1000;
-
-  return days + hours + minutes + seconds;
-}

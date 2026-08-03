@@ -1,103 +1,90 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const { MemberData, GuildSettings } = require('../../models/Level');
-const { createCanvas, loadImage, registerFont } = require('@napi-rs/canvas');
-const sharp = require('sharp');
-const fetch = require('node-fetch');
+const {
+    SlashCommandBuilder,
+    EmbedBuilder
+} = require("discord.js");
+
+const User = require("../../models/User");
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('level')
-    .setDescription('Check your level and XP.')
-    .addUserOption((option) =>
-      option.setName('user').setDescription('The user to check.')
-    ),
-  async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply();
+    name: "rank",
+
+    data: new SlashCommandBuilder()
+        .setName("rank")
+        .setDescription("Shows your level and XP.")
+        .addUserOption(option =>
+            option
+                .setName("user")
+                .setDescription("Select a user")
+                .setRequired(false)
+        ),
+
+    async execute(interaction) {
+
+        const target = interaction.options.getUser("user") || interaction.user;
+
+        let data = await User.findOne({
+            guildId: interaction.guild.id,
+            userId: target.id
+        });
+
+        if (!data) {
+
+            data = await User.create({
+                guildId: interaction.guild.id,
+                userId: target.id
+            });
+
+        }
+
+        const neededXP = data.level * 100;
+
+        const progress = Math.min(
+            Math.floor((data.xp / neededXP) * 10),
+            10
+        );
+
+        const bar =
+            "🟩".repeat(progress) +
+            "⬜".repeat(10 - progress);
+
+        const embed = new EmbedBuilder()
+            .setColor("#5865F2")
+            .setTitle("🏅 Rank Card")
+            .setThumbnail(
+                target.displayAvatarURL({
+                    dynamic: true,
+                    size: 1024
+                })
+            )
+            .addFields(
+                {
+                    name: "👤 User",
+                    value: target.tag,
+                    inline: true
+                },
+                {
+                    name: "⭐ Level",
+                    value: `${data.level}`,
+                    inline: true
+                },
+                {
+                    name: "✨ XP",
+                    value: `${data.xp} / ${neededXP}`,
+                    inline: true
+                },
+                {
+                    name: "📊 Progress",
+                    value: `${bar} (${Math.floor((data.xp / neededXP) * 100)}%)`
+                }
+            )
+            .setTimestamp();
+
+        await interaction.reply({
+            embeds: [embed]
+        });
+
     }
-
-    const guildData = await GuildSettings.findOne({
-      guildId: interaction.guild.id,
-    });
-
-    if (!guildData) {
-      return interaction.editReply({
-        content:
-          'Leveling system is not configured for this server yet. Please ask an admin to set it up.',
-        flags: 64,
-      });
-    }
-
-    if (!guildData.levelingEnabled) {
-      return interaction.editReply({
-        content: 'Leveling system is not enabled in this Server',
-        flags: 64,
-      });
-    }
-
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-    const statusTarget =
-      interaction.options.getMember('user') || interaction.member;
-
-    const memberData = await MemberData.findOne({
-      guildId: interaction.guild.id,
-      userId: targetUser.id,
-    });
-
-    if (!memberData) {
-      return interaction.editReply({
-        content: `${targetUser.username} has no level data.`,
-        flags: 64,
-      });
-    }
-
-    const xpNeeded = this.calculateXpNeeded(memberData.level, guildData);
-    const progress = memberData.xp / xpNeeded;
-
-    const canvasWidth = 934;
-    const canvasHeight = 282;
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext('2d'); // ✅ Ensure ctx is defined before using it
-
-    ctx.fillStyle = '#1C1F26';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#2C2F33';
-    ctx.fillRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-    const innerStrokeColor = 'rgba(255, 255, 255, 0.3)';
-    ctx.strokeStyle = innerStrokeColor;
-    ctx.lineWidth = 15;
-    ctx.strokeRect(7.5, 7.5, canvas.width - 15, canvas.height - 15);
-
-    const avatarUrl = targetUser.displayAvatarURL?.({
-      extension: 'webp',
-      size: 256,
-    });
-
-    if (!avatarUrl) {
-      console.error(`Failed to fetch avatar URL for ${targetUser.username}`);
-      return interaction.editReply({
-        content: `Could not retrieve avatar for ${targetUser.username}.`,
-        flags: 64,
-      });
-    }
-
-    try {
-      console.log(`Fetching avatar: ${avatarUrl}`);
-
-      const response = await fetch(avatarUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch avatar image: ${response.statusText}`);
-      }
-
-      const buffer = await response.arrayBuffer(); // 🔹 Fix: Use `arrayBuffer()` instead of `buffer()`
-      if (!buffer || buffer.byteLength === 0) {
-        throw new Error(`Avatar image buffer is empty.`);
-      }
-
-      console.log(`Avatar buffer length: ${buffer.byteLength}`);
-
-      const pngBuffer = await sharp(Buffer.from(buffer))
+};      const pngBuffer = await sharp(Buffer.from(buffer))
         .toFormat('png')
         .toBuffer(); // 🔹 Fix: Convert `ArrayBuffer` to `Buffer`
       if (!pngBuffer || pngBuffer.length === 0) {

@@ -1,70 +1,48 @@
-const mongoose = require("mongoose");
+const useMongoose = Boolean(process.env.MONGODB_URI);
 
-const userSchema = new mongoose.Schema({
+if (useMongoose) {
+  const mongoose = require("mongoose");
 
-    guildId: {
-        type: String,
-        required: true
+  const userSchema = new mongoose.Schema({
+    guildId: { type: String, required: true },
+    userId: { type: String, required: true },
+    xp: { type: Number, default: 0 },
+    level: { type: Number, default: 0 }
+  }, { timestamps: true });
+
+  userSchema.index({ guildId: 1, userId: 1 }, { unique: true });
+
+  module.exports = mongoose.model("User", userSchema);
+} else {
+  // In-memory fallback for users
+  const store = new Map(); // key: `${guildId}:${userId}`
+
+  function key(guildId, userId) { return `${guildId}:${userId}`; }
+
+  class UserDoc {
+    constructor(obj) { Object.assign(this, obj); }
+    async save() { store.set(key(this.guildId, this.userId), this); return this; }
+  }
+
+  module.exports = {
+    async find(query) {
+      const results = [];
+      const prefix = `${query.guildId}:`;
+      for (const [k, v] of store.entries()) {
+        if (k.startsWith(prefix)) results.push(new UserDoc(v));
+      }
+      return results;
     },
-
-    userId: {
-        type: String,
-        required: true
+    async findOne(query) {
+      const v = store.get(key(query.guildId, query.userId));
+      return v ? new UserDoc(v) : null;
     },
-
-    // Level System
-    xp: {
-        type: Number,
-        default: 0
+    async create(obj) {
+      const data = Object.assign({ xp: 0, level: 0 }, obj);
+      const doc = new UserDoc(data);
+      store.set(key(doc.guildId, doc.userId), doc);
+      return doc;
     },
-
-    level: {
-        type: Number,
-        default: 1
-    },
-
-    // Economy (Future)
-    balance: {
-        type: Number,
-        default: 0
-    },
-
-    bank: {
-        type: Number,
-        default: 0
-    },
-
-    // Moderation
-    warns: {
-        type: Number,
-        default: 0
-    },
-
-    // AFK System
-    afk: {
-        type: Boolean,
-        default: false
-    },
-
-    afkReason: {
-        type: String,
-        default: null
-    },
-
-    afkSince: {
-        type: Number,
-        default: null
-    }
-
-}, {
-    timestamps: true
-});
-
-userSchema.index({
-    guildId: 1,
-    userId: 1
-}, {
-    unique: true
-});
-
-module.exports = mongoose.model("User", userSchema);
+    _internal_store: store
+  };
+}

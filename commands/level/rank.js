@@ -3,7 +3,7 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const User = require("../../models/user");
+const User = require("../../models/User");
 
 module.exports = {
     name: "rank",

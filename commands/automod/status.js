@@ -4,7 +4,7 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const Guild = require("../../models/Guild");
+const Guild = require("../../models/guild");
 
 module.exports = {
     name: "automod-status",

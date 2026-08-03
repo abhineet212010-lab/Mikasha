@@ -10,6 +10,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 const logger = require("./utils/logger");
+const User = require("../../models/User");
 
 const client = new Client({
     intents: [

@@ -24,7 +24,7 @@ module.exports = {
 
         try {
             const bans = await interaction.guild.bans.fetch();
-            const bannedUser = bans.get(userId);
+            const bannedUser = bans.get(userId) || bans.find(b => b.user && b.user.id === userId);
 
             if (!bannedUser) {
                 return interaction.reply({
@@ -41,7 +41,7 @@ module.exports = {
                 .addFields(
                     {
                         name: "User",
-                        value: bannedUser.user.tag,
+                        value: bannedUser.user ? `${bannedUser.user.tag}` : `${userId}`,
                         inline: true
                     },
                     {
@@ -57,6 +57,13 @@ module.exports = {
             });
 
         } catch (err) {
-            console.error(err);
+            console.error('Unban command error:', err);
 
             return interaction.reply({
+                content: `❌ Failed to unban user: ${err.message || err}`,
+                ephemeral: true
+            });
+        }
+
+    }
+};

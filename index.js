@@ -7,7 +7,6 @@ const {
     Collection
 } = require("discord.js");
 
-const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 const logger = require("./utils/logger");
@@ -35,24 +34,6 @@ client.commands = new Collection();
 client.aliases = new Collection();
 
 global.client = client;
-
-/* ==============================
-   MongoDB Connection
-============================== */
-
-async function connectMongo() {
-    if (!process.env.MONGODB_URI) {
-        logger.warn("MongoDB URI not found.");
-        return;
-    }
-
-    try {
-        await mongoose.connect(process.env.MONGODB_URI);
-        logger.success("MongoDB Connected");
-    } catch (err) {
-        logger.error(err);
-    }
-}
 
 /* ==============================
    Load Handlers
@@ -120,12 +101,16 @@ process.on("uncaughtException", console.error);
 
 (async () => {
 
-    await connectMongo();
+    // Note: MongoDB usage was removed per your request. Models now use an in-memory
+    // fallback when MONGODB_URI is not set. See models/* for details.
 
     loadHandlers();
 
     loadEvents();
 
-    client.login(process.env.TOKEN);
+    client.login(process.env.TOKEN).catch(err => {
+        logger.error('Failed to login:', err && err.message ? err.message : err);
+        process.exit(1);
+    });
 
 })();

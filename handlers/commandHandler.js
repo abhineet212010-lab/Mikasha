@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const User = require("../../models/User");
 
 module.exports = (client) => {
+
     const commandsPath = path.join(__dirname, "..", "commands");
 
     if (!fs.existsSync(commandsPath)) {
@@ -13,6 +13,7 @@ module.exports = (client) => {
     const folders = fs.readdirSync(commandsPath);
 
     for (const folder of folders) {
+
         const folderPath = path.join(commandsPath, folder);
 
         if (!fs.statSync(folderPath).isDirectory()) continue;
@@ -22,6 +23,7 @@ module.exports = (client) => {
             .filter(file => file.endsWith(".js"));
 
         for (const file of commandFiles) {
+
             const command = require(path.join(folderPath, file));
 
             if (!command.name || !command.execute) {
@@ -31,15 +33,18 @@ module.exports = (client) => {
 
             client.commands.set(command.name, command);
 
-            if (command.aliases) {
+            if (command.aliases && Array.isArray(command.aliases)) {
                 for (const alias of command.aliases) {
                     client.aliases.set(alias, command.name);
                 }
             }
 
             console.log(`✅ Loaded: ${command.name}`);
+
         }
+
     }
 
     console.log(`📦 Total Commands Loaded: ${client.commands.size}`);
+
 };

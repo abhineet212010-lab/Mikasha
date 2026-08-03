@@ -4,39 +4,45 @@ const {
 } = require("discord.js");
 
 module.exports = {
-
     name: "ping",
-    aliases: ["p"],
 
     data: new SlashCommandBuilder()
         .setName("ping")
         .setDescription("Shows the bot latency."),
 
-    async execute(ctx, args, client) {
+    async execute(interaction) {
 
-        const interaction = ctx.isChatInputCommand?.();
+        const sent = await interaction.reply({
+            content: "🏓 Pinging...",
+            fetchReply: true
+        });
+
+        const apiPing = Math.round(interaction.client.ws.ping);
+        const botPing = sent.createdTimestamp - interaction.createdTimestamp;
 
         const embed = new EmbedBuilder()
-            .setColor(process.env.DEFAULT_COLOR || "#ff4d6d")
+            .setColor("#5865F2")
             .setTitle("🏓 Pong!")
             .addFields(
                 {
-                    name: "Bot Ping",
-                    value: `${client.ws.ping}ms`,
+                    name: "🤖 Bot Latency",
+                    value: `${botPing}ms`,
                     inline: true
                 },
                 {
-                    name: "Status",
-                    value: "🟢 Online",
+                    name: "🌐 API Latency",
+                    value: `${apiPing}ms`,
                     inline: true
                 }
             )
+            .setFooter({
+                text: `Requested by ${interaction.user.tag}`
+            })
             .setTimestamp();
 
-        if (interaction) {
-            return ctx.reply({ embeds: [embed] });
-        }
-
-        return ctx.reply({ embeds: [embed] });
+        await interaction.editReply({
+            content: "",
+            embeds: [embed]
+        });
     }
 };

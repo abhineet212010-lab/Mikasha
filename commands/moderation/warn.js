@@ -4,7 +4,7 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const User = require("../../models/User");
+const User = require("../../models/user");
 
 module.exports = {
     name: "warn",
@@ -47,11 +47,15 @@ module.exports = {
         if (!data) {
             data = await User.create({
                 userId: member.id,
-                guildId: interaction.guild.id
+                guildId: interaction.guild.id,
+                xp: 0,
+                level: 0,
+                warns: 0
             });
         }
 
-        data.warns += 1;
+        // Ensure warns is a number
+        data.warns = (data.warns || 0) + 1;
         await data.save();
 
         const embed = new EmbedBuilder()
@@ -59,4 +63,30 @@ module.exports = {
             .setTitle("⚠️ Member Warned")
             .addFields(
                 {
-                    name: "
+                    name: "User",
+                    value: member.user.tag,
+                    inline: true
+                },
+                {
+                    name: "Moderator",
+                    value: interaction.user.tag,
+                    inline: true
+                },
+                {
+                    name: "Reason",
+                    value: reason
+                },
+                {
+                    name: "Total Warns",
+                    value: `${data.warns}`,
+                    inline: true
+                }
+            )
+            .setTimestamp();
+
+        return interaction.reply({
+            embeds: [embed]
+        });
+
+    }
+};

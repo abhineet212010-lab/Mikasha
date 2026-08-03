@@ -4,7 +4,7 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const Guild = require("../../models/Guild");
+const Guild = require("../../models/guild");
 
 module.exports = {
     name: "logs-setup",
@@ -40,7 +40,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor("#5865F2")
             .setTitle("📜 Logs Configured")
-            .setDescription(`Logs channel has been set to ${channel}.`)
+            .setDescription(`Logs channel has been set to <#${channel.id}>.`)
             .addFields({
                 name: "Configured By",
                 value: interaction.user.tag

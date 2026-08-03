@@ -3,7 +3,7 @@ const {
     EmbedBuilder
 } = require("discord.js");
 
-const User = require("../../models/User");
+const User = require("../../models/user");
 
 module.exports = {
     name: "leaderboard",
@@ -38,14 +38,7 @@ module.exports = {
                     .fetch(data.userId)
                     .catch(() => null);
 
-            description +=
-`**#${i + 1}** ${
-member ? member.tag : "Unknown User"
-}
-🏅 Level: **${data.level}**
-✨ XP: **${data.xp}**
-
-`;
+            description += `**#${i + 1}** ${member ? member.tag : "Unknown User"}\n🏅 Level: **${data.level}**\n✨ XP: **${data.xp}**\n\n`;
 
         }
 
@@ -63,20 +56,4 @@ member ? member.tag : "Unknown User"
         });
 
     }
-};      ctx.fillText(`${member.xp}`, 700, y);
-    }
-
-    // Convert canvas to buffer
-    const buffer = await canvas.encode('png');
-
-    // Send image
-    const attachment = new AttachmentBuilder(buffer, {
-      name: 'leaderboard.png',
-    });
-
-    await interaction.editReply({
-      content: 'Here is the current leaderboard:',
-      files: [attachment],
-    });
-  },
 };
